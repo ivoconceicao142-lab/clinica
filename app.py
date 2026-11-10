@@ -6,14 +6,28 @@ from urllib.parse import urlparse
 from core import Store,ACCESS
 
 ROOT=Path(__file__).resolve().parent
-DATA=ROOT/'dados';DATA.mkdir(exist_ok=True)
-store=Store(DATA/'clinica.sqlite')
-attempts={};lock=threading.Lock()
-setup_lock=threading.Lock()
-identity=DATA/'installation-id.txt'
-if not identity.exists(): identity.write_text(secrets.token_hex(16),encoding='ascii')
-INSTALLATION=identity.read_text(encoding='ascii').strip()
-PUBLIC=os.environ.get('CLINICA_ORIGIN','')
+CLOUD=os.environ.get('VERCEL')=='1' or bool(os.environ.get('DATABASE_URL'))
+PUBLIC=os.environ.get('CLINICA_ORIGIN','').rstrip('/')
+DATA=ROOT/'dados'
+attempts={};lock=threading.Lock();setup_lock=threading.Lock()
+store=None;INSTALLATION='';CONFIG_ERROR=None
+if not CLOUD:
+ DATA.mkdir(exist_ok=True);store=Store(DATA/'clinica.sqlite')
+ identity=DATA/'installation-id.txt'
+ if not identity.exists():identity.write_text(secrets.token_hex(16),encoding='ascii')
+ INSTALLATION=identity.read_text(encoding='ascii').strip()
+
+def ensure_store():
+ global store,INSTALLATION
+ if store is not None:return
+ if not os.environ.get('DATABASE_URL'):raise RuntimeError('Banco online não configurado.')
+ parsed=urlparse(PUBLIC)
+ if parsed.scheme!='https' or not parsed.netloc or parsed.path or parsed.query or parsed.fragment:raise RuntimeError('Origem HTTPS não configurada.')
+ with setup_lock:
+  if store is None:
+   from postgres_store import PostgresStore
+   store=PostgresStore(os.environ['DATABASE_URL']);INSTALLATION=store.installation
+
 class Handler(BaseHTTPRequestHandler):
  def log_message(self,*args):pass
  def send(self,obj,status=200,cookie=None):
@@ -25,6 +39,7 @@ class Handler(BaseHTTPRequestHandler):
   self.send_header('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; form-action 'self'; base-uri 'none'")
  def origin(self):return PUBLIC or 'http://'+self.headers.get('Host','')
  def host_valid(self):
+  if CLOUD and not PUBLIC:return False
   expected=urlparse(PUBLIC).netloc if PUBLIC else '127.0.0.1:'+str(self.server.server_port)
   return self.headers.get('Host')==expected
  def session(self):
@@ -33,11 +48,16 @@ class Handler(BaseHTTPRequestHandler):
   with store.connect() as c:r=c.execute('SELECT u.id,u.name,u.role FROM sessions s JOIN users u ON s.user=u.id WHERE s.token=? AND s.expires>? AND u.active=1',(hashlib.sha256(token.encode()).hexdigest(),time.time())).fetchone()
   return dict(r) if r else None
  def do_GET(self):
+  try:return self.get_page()
+  except Exception:return self.send({'error':'Serviço indisponível. Confira a configuração do banco e da origem HTTPS; nenhum dado foi confirmado.'},503)
+ def get_page(self):
+  if CLOUD and not PUBLIC:return self.send({'error':'Configure CLINICA_ORIGIN e DATABASE_URL no painel antes de usar.'},503)
   if not self.host_valid():return self.send({'error':'Endereço não autorizado.'},403)
   path=urlparse(self.path).path
+  if path.startswith('/api/'):ensure_store()
   if path=='/api/setup':
    with store.connect() as c: needed=c.execute('SELECT COUNT(*) FROM users').fetchone()[0]==0
-   return self.send({'needed':needed,'installation':INSTALLATION})
+   return self.send({'needed':needed and not CLOUD,'installation':INSTALLATION,'adminPending':needed and CLOUD})
   if path.startswith('/api/'):
    u=self.session()
    if not u:return self.send({'error':'Entre novamente para sincronizar.'},401)
@@ -58,12 +78,13 @@ class Handler(BaseHTTPRequestHandler):
   self.send_header('Content-Length',str(len(raw)));self.end_headers();self.wfile.write(raw)
  def do_POST(self):
   try:
+   ensure_store()
    if not self.host_valid() or self.headers.get('Origin')!=self.origin() or self.headers.get('X-Clinica-Request')!='1':return self.send({'error':'Origem inválida. Reabra o sistema.'},403)
    length=int(self.headers.get('Content-Length','0'))
    if not 0<length<=1000000:return self.send({'error':'Pedido muito grande ou vazio.'},400)
    body=json.loads(self.rfile.read(length));path=urlparse(self.path).path
    if path=='/api/setup':
-    if PUBLIC or self.client_address[0]!='127.0.0.1':return self.send({'error':'Configuração permitida apenas neste computador.'},403)
+    if CLOUD or PUBLIC or self.client_address[0]!='127.0.0.1':return self.send({'error':'Configuração permitida apenas neste computador.'},403)
     with setup_lock:
      with store.connect() as c: exists=c.execute('SELECT COUNT(*) FROM users').fetchone()[0]
      if exists:return self.send({'error':'Já existe administrador. Entre para cadastrar outros usuários.'},409)
@@ -74,6 +95,7 @@ class Handler(BaseHTTPRequestHandler):
      seed(store,{'id':uid,'name':body['name'].strip().lower(),'role':'administrador'})
     return self.send({'ok':True})
    if path=='/api/login':
+    if CLOUD and not store.allow_login(str(body.get('name',''))):return self.send({'error':'Muitas tentativas para este usuário. Aguarde 15 minutos.'},429)
     ident=self.client_address[0]
     with lock:
      hits=[t for t in attempts.get(ident,[]) if t>time.time()-900];attempts[ident]=hits
@@ -104,6 +126,7 @@ class Handler(BaseHTTPRequestHandler):
     uid=store.create_user(body.get('name',''),body.get('password',''),body.get('role',''),u['id']);return self.send({'id':uid})
    if path=='/api/backup':
     if u['role']!='administrador':return self.send({'error':'Somente administrador.'},403)
+    if CLOUD:return self.send({'error':'Backup online deve ser executado pelo provedor PostgreSQL. Nenhum arquivo de backup foi criado.'},409)
     folder=ROOT/'backups';folder.mkdir(exist_ok=True);dest=folder/('clinica-'+time.strftime('%Y%m%d-%H%M%S')+'-'+secrets.token_hex(2)+'.sqlite');store.backup(dest)
     return self.send({'message':'Backup verificado salvo na pasta backups da clínica. Proteja essa pasta com criptografia do disco.','file':dest.name})
    return self.send({'error':'Não encontrado.'},404)
@@ -113,13 +136,15 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
  parser=argparse.ArgumentParser();parser.add_argument('--criar-admin',action='store_true');parser.add_argument('--restaurar');parser.add_argument('--port',type=int,default=8889);args=parser.parse_args()
+ ensure_store()
  if args.criar_admin:
   with store.connect() as c:exists=c.execute('SELECT COUNT(*) FROM users').fetchone()[0]
   if exists:raise SystemExit('Já há usuários. Novos usuários devem ser criados pelo administrador na interface.')
   name=input('Nome do administrador (sem espaços): ');pwd=getpass.getpass('Senha com pelo menos 12 caracteres: ')
   if pwd!=getpass.getpass('Repita a senha: '):raise SystemExit('As senhas não conferem.')
-  store.create_user(name,pwd,'administrador');print('Administrador criado.');return
+  (store.bootstrap(name,pwd) if CLOUD else store.create_user(name,pwd,'administrador'));print('Administrador criado.');return
  if args.restaurar:
+  if CLOUD:raise SystemExit('Restauração online deve usar ferramentas PostgreSQL e backup validado. SQLite local não será copiado automaticamente.')
   src=Path(args.restaurar).resolve()
   if src==store.path.resolve():raise SystemExit('Selecione outro arquivo.')
   with sqlite3.connect(f'file:{src.as_posix()}?mode=ro',uri=True) as c:
@@ -138,5 +163,6 @@ def main():
  print('Não use pacientes reais. Mantenha esta janela aberta.',flush=True)
  try:server.serve_forever()
  except KeyboardInterrupt:server.server_close()
+handler=Handler
 if __name__=='__main__':main()
 

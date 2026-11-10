@@ -1,0 +1,12 @@
+# Nunca enviar dados, backups ou credenciais para o build
+python/
+dados/
+ensaio/
+backups/
+tmp-test/
+__pycache__/
+*.sqlite*
+*.db
+*.log
+.env*
+*.zip

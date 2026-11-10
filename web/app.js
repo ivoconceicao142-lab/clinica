@@ -113,7 +113,7 @@ $('print').onclick=()=>window.print();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>message('Não foi possível preparar a abertura offline. Verifique HTTPS e permissões do navegador.'));
 
 async function setupScreen(){
- try{const config=await api('setup');$('firstSetup').hidden=!config.needed;$('login').hidden=config.needed;}catch(e){message('Servidor não disponível. Abra INICIAR.cmd; o desbloqueio offline requer um acesso anterior.');}
+ try{const config=await api('setup');$('firstSetup').hidden=!config.needed;$('login').hidden=config.needed;if(config.adminPending)message('O administrador online ainda precisa ser configurado pelo responsável pela implantação.');}catch(e){message('Servidor não disponível. Abra INICIAR.cmd; o desbloqueio offline requer um acesso anterior.');}
 }
 $('setupForm').onsubmit=async e=>{
  e.preventDefault();const button=$('setupSubmit');button.disabled=true;

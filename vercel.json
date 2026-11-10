@@ -1,0 +1,1 @@
+{"$schema":"https://openapi.vercel.sh/vercel.json","functions":{"app.py":{"excludeFiles":"{python/**,dados/**,ensaio/**,backups/**,tmp-test/**,test_*.py,*.zip}"}}}
