@@ -17,6 +17,14 @@ if not CLOUD:
  if not identity.exists():identity.write_text(secrets.token_hex(16),encoding='ascii')
  INSTALLATION=identity.read_text(encoding='ascii').strip()
 
+def log_failure(exc):
+ # Somente tipo, código SQL e localização: nunca mensagem, SQL ou credenciais.
+ import traceback,sys
+ frames=[f'{Path(f.filename).name}:{f.lineno}:{f.name}' for f in traceback.extract_tb(exc.__traceback__)]
+ state=getattr(exc,'sqlstate',None)
+ if not isinstance(state,str) or len(state)!=5 or not state.isalnum():state=None
+ print(json.dumps({'event':'clinica_server_error','type':type(exc).__name__,'sqlstate':state,'frames':frames}),file=sys.stderr,flush=True)
+
 def ensure_store():
  global store,INSTALLATION
  if store is not None:return
@@ -49,7 +57,9 @@ class Handler(BaseHTTPRequestHandler):
   return dict(r) if r else None
  def do_GET(self):
   try:return self.get_page()
-  except Exception:return self.send({'error':'Serviço indisponível. Confira a configuração do banco e da origem HTTPS; nenhum dado foi confirmado.'},503)
+  except Exception as exc:
+   log_failure(exc)
+   return self.send({'error':'Serviço indisponível. Confira a configuração do banco e da origem HTTPS; nenhum dado foi confirmado.'},503)
  def get_page(self):
   if CLOUD and not PUBLIC:return self.send({'error':'Configure CLINICA_ORIGIN e DATABASE_URL no painel antes de usar.'},503)
   if not self.host_valid():return self.send({'error':'Endereço não autorizado.'},403)
