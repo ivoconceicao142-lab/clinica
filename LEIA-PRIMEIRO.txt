@@ -1,0 +1,26 @@
+CLINICA - DEMONSTRACAO PARA APRESENTACAO
+
+1. Copie o ZIP para o outro notebook com Windows 10/11 de 64 bits (Intel/AMD).
+2. Clique com o botao direito no ZIP e escolha Extrair tudo.
+3. Abra a pasta extraida e de dois cliques em ABRIR-DEMONSTRACAO.cmd.
+4. Mantenha a janela de comando aberta. O navegador abrira automaticamente.
+5. Usuario: teste. Senha: SomenteTeste123!
+Se o navegador nao abrir, digite http://127.0.0.1:18889/ nele.
+Para encerrar, pressione Ctrl+C na janela de comando.
+
+Nao precisa instalar Python: ele ja esta na pasta python.
+Internet nao e necessaria para demonstrar localmente depois de extrair.
+Use somente dados ficticios. Cada notebook guarda seu proprio ensaio.
+Nao compartilha cadastros entre computadores. Nao e implantacao oficial.
+Nao funciona em Android, macOS ou Windows de 32 bits.
+Se houver bloqueio pelo antivirus ou pela politica da empresa, consulte o responsavel; nao desative protecoes.
+Se a porta estiver ocupada, feche a outra demonstracao antes de iniciar.
+Nao execute dentro do ZIP nem em pasta sem permissao de gravacao.
+
+A estrutura da versao 3 foi preservada. O iniciador e o Python foram incluidos
+para facilitar a apresentacao. Acesso externo, validacao clinica e uso real
+continuam pendentes. Os usuarios de demonstracao sao conhecidos e nao devem
+ser usados em sistemas publicados. Nao inclui cadastros ou backups reais.
+
+Python embutido oficial 3.12.10, com licenca em python/LICENSE.txt.
+Origem: https://www.python.org/downloads/release/python-31210/
