@@ -1,0 +1,13 @@
+﻿dados/
+ensaio/
+backups/
+python/
+__pycache__/
+tmp-test/
+*.pyc
+*.sqlite
+*.sqlite-*
+*.db
+*.log
+.env
+.env.*

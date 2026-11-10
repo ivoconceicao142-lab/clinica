@@ -29,6 +29,9 @@ FIELDS['clinico']|={'respostas','queixa','historia','odontologico','familiar','p
 FIELDS['titulos']|={'desconto','acrescimo','vinculo','servico','cancelado','motivo_cancelamento'}
 FIELDS['pagamentos']|={'data','forma','confirmado'}
 
+ACCESS['funcionarios']={'administrador'}
+FIELDS['funcionarios']={'nome','matricula','cargo','registro','ativo'}
+
 class Connection(sqlite3.Connection):
  def __exit__(self,*args):
   try:return super().__exit__(*args)
@@ -104,9 +107,11 @@ class Store:
     v=text(key).casefold()
     for r in self.records(c,kind):
      if r['id']!=rid and r['data'].get(key,'').strip().casefold()==v:raise ValueError('Já existe cadastro com '+key+' igual.')
-   if kind in {'pacientes','pessoas','materiais'}:
+   if kind in {'pacientes','pessoas','materiais','funcionarios'}:
     text('nome')
     if type(d.get('ativo'))!=bool:raise ValueError('Informe ativo ou inativo.')
+   if kind=='funcionarios':
+    unique('matricula');text('cargo');text('registro',False)
    if kind=='pacientes':unique('matricula');text('telefone',False);text('responsavel',False)
    if kind=='pessoas':
     if text('tipo') not in {'profissional','fornecedor'}:raise ValueError('Tipo de pessoa inválido.')

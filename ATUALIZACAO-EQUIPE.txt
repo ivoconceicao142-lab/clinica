@@ -1,0 +1,14 @@
+ATUALIZACAO 10/11/2026 - EQUIPE E USUARIOS
+Aplicada NA MESMA PASTA. Nenhum banco substituido; backup de codigo e banco em backups/antes-equipe-*.
+
+Feche a janela antiga do sistema e execute INICIAR.cmd novamente. No navegador pressione Ctrl+F5.
+Entre como administrador.
+Funcionarios: menu Funcionarios > Cadastrar funcionario. Matricula unica como texto, cargo, registro profissional e ativo/inativo. Cadastros nao sao excluidos; historico preservado. Acesso restrito ao administrador.
+Usuarios: Administracao > Cadastrar usuario. Informe usuario em minusculas, perfil, senha de pelo menos 12 caracteres e confirmacao. Depois consulte usuarios e perfis. Exige servidor conectado.
+Funcionario e usuario sao cadastros distintos: registrar um funcionario NAO concede acesso. Profissionais habilitados para agenda continuam no cadastro Profissionais e fornecedores.
+
+Verificado: nove testes de dominio existentes, teste adicional de funcionario (matricula, duplicidade, permissao e inativacao), teste da rota de usuarios em memoria (permissao, senha curta, criacao, login e duplicidade), sintaxe JavaScript/Python. A execucao de test_equipe repetiu os nove testes existentes por heranca; nao representa 19 cenarios distintos novos.
+Pendente: verificacao visual no navegador e operacao em aparelhos reais. A falha relatada de cadastro ainda requer confirmacao na interface atualizada.
+
+ESTADO: atualizacao funcional, ainda NAO homologada para uso clinico real. Permanecem pendentes recuperacao/troca segura de senha, backup externo automatizado, acesso remoto seguro e validacao multiaparelho/offline. O aviso de avaliacao foi mantido; retira-lo nao tornaria o sistema pronto.
+Retorno: encerrar servidor; recuperar arquivos do ZIP antes-equipe. Banco permanece intacto. Restaurar banco somente com conferencia das alteracoes posteriores e backup adicional.

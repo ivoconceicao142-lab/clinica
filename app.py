@@ -9,6 +9,10 @@ ROOT=Path(__file__).resolve().parent
 DATA=ROOT/'dados';DATA.mkdir(exist_ok=True)
 store=Store(DATA/'clinica.sqlite')
 attempts={};lock=threading.Lock()
+setup_lock=threading.Lock()
+identity=DATA/'installation-id.txt'
+if not identity.exists(): identity.write_text(secrets.token_hex(16),encoding='ascii')
+INSTALLATION=identity.read_text(encoding='ascii').strip()
 PUBLIC=os.environ.get('CLINICA_ORIGIN','')
 class Handler(BaseHTTPRequestHandler):
  def log_message(self,*args):pass
@@ -31,6 +35,9 @@ class Handler(BaseHTTPRequestHandler):
  def do_GET(self):
   if not self.host_valid():return self.send({'error':'Endereço não autorizado.'},403)
   path=urlparse(self.path).path
+  if path=='/api/setup':
+   with store.connect() as c: needed=c.execute('SELECT COUNT(*) FROM users').fetchone()[0]==0
+   return self.send({'needed':needed,'installation':INSTALLATION})
   if path.startswith('/api/'):
    u=self.session()
    if not u:return self.send({'error':'Entre novamente para sincronizar.'},401)
@@ -55,6 +62,17 @@ class Handler(BaseHTTPRequestHandler):
    length=int(self.headers.get('Content-Length','0'))
    if not 0<length<=1000000:return self.send({'error':'Pedido muito grande ou vazio.'},400)
    body=json.loads(self.rfile.read(length));path=urlparse(self.path).path
+   if path=='/api/setup':
+    if PUBLIC or self.client_address[0]!='127.0.0.1':return self.send({'error':'Configuração permitida apenas neste computador.'},403)
+    with setup_lock:
+     with store.connect() as c: exists=c.execute('SELECT COUNT(*) FROM users').fetchone()[0]
+     if exists:return self.send({'error':'Já existe administrador. Entre para cadastrar outros usuários.'},409)
+     if body.get('password')!=body.get('confirm'):return self.send({'error':'As senhas não conferem.'},400)
+     uid=store.create_user(body.get('name',''),body.get('password',''),'administrador')
+    if body.get('examples') is True:
+     from seed_demo import seed
+     seed(store,{'id':uid,'name':body['name'].strip().lower(),'role':'administrador'})
+    return self.send({'ok':True})
    if path=='/api/login':
     ident=self.client_address[0]
     with lock:
@@ -89,7 +107,8 @@ class Handler(BaseHTTPRequestHandler):
     folder=ROOT/'backups';folder.mkdir(exist_ok=True);dest=folder/('clinica-'+time.strftime('%Y%m%d-%H%M%S')+'-'+secrets.token_hex(2)+'.sqlite');store.backup(dest)
     return self.send({'message':'Backup verificado salvo na pasta backups da clínica. Proteja essa pasta com criptografia do disco.','file':dest.name})
    return self.send({'error':'Não encontrado.'},404)
-  except (ValueError,KeyError,TypeError,sqlite3.IntegrityError) as e:self.send({'error':str(e)},400)
+  except sqlite3.IntegrityError:self.send({'error':'Já existe cadastro com esse identificador. Escolha outro usuário ou confira os registros.'},400)
+  except (ValueError,KeyError,TypeError) as e:self.send({'error':str(e)},400)
   except Exception:self.send({'error':'Falha interna. Operação não confirmada; preserve a fila e tente novamente.'},500)
 
 def main():

@@ -1,26 +1,33 @@
-CLINICA - DEMONSTRACAO PARA APRESENTACAO
+CLINICA - DEMONSTRACAO UNIFICADA - 10/11/2026
 
-1. Copie o ZIP para o outro notebook com Windows 10/11 de 64 bits (Intel/AMD).
-2. Clique com o botao direito no ZIP e escolha Extrair tudo.
-3. Abra a pasta extraida e de dois cliques em ABRIR-DEMONSTRACAO.cmd.
-4. Mantenha a janela de comando aberta. O navegador abrira automaticamente.
-5. Usuario: teste. Senha: SomenteTeste123!
-Se o navegador nao abrir, digite http://127.0.0.1:18889/ nele.
-Para encerrar, pressione Ctrl+C na janela de comando.
+1. Extraia TODO o ZIP para uma pasta no computador Windows 10/11 de 64 bits.
+2. No Explorador de Arquivos, execute INICIAR.cmd com dois cliques.
+3. Mantenha a janela aberta. O navegador abre o endereco exibido na janela de inicializacao.
+4. No primeiro acesso, cadastre seu usuario (minusculas) e senha com minimo de 12 caracteres. Repita a senha.
+5. Marque Incluir exemplos ficticios se desejar demonstrar com exemplos.
+6. Clique Criar administrador e entre com a senha escolhida.
+7. Para outras pessoas nesta mesma instalacao: entre como administrador e use Administracao > Novo usuario.
 
-Nao precisa instalar Python: ele ja esta na pasta python.
-Internet nao e necessaria para demonstrar localmente depois de extrair.
-Use somente dados ficticios. Cada notebook guarda seu proprio ensaio.
-Nao compartilha cadastros entre computadores. Nao e implantacao oficial.
-Nao funciona em Android, macOS ou Windows de 32 bits.
-Se houver bloqueio pelo antivirus ou pela politica da empresa, consulte o responsavel; nao desative protecoes.
-Se a porta estiver ocupada, feche a outra demonstracao antes de iniciar.
-Nao execute dentro do ZIP nem em pasta sem permissao de gravacao.
+NAO EXISTE SENHA PADRAO NESTE PACOTE. O usuario teste da versao anterior nao foi importado.
+Python ja esta incluido. O programa abre no navegador; nao e um aplicativo nativo para celular.
+Cada copia instalada em outro PC tem banco independente. Nao compartilha automaticamente dados pela internet.
 
-A estrutura da versao 3 foi preservada. O iniciador e o Python foram incluidos
-para facilitar a apresentacao. Acesso externo, validacao clinica e uso real
-continuam pendentes. Os usuarios de demonstracao sao conhecidos e nao devem
-ser usados em sistemas publicados. Nao inclui cadastros ou backups reais.
+DADOS: ficam na pasta dados. Nao apague nem substitua esta pasta.
+Use Administracao > Criar backup para gerar uma copia verificada em backups. Proteja os backups.
+Nao mova dados entre as versoes sem uma migracao conferida. As instalacoes antigas foram preservadas.
+Os cofres locais agora sao separados por identificador da instalacao; cofres antigos nao sao apagados.
 
-Python embutido oficial 3.12.10, com licenca em python/LICENSE.txt.
-Origem: https://www.python.org/downloads/release/python-31210/
+SE NAO ABRIR: execute o arquivo no Explorador de Arquivos, nao na visualizacao de texto deste chat.
+Se a porta estiver ocupada, encerre a outra copia e tente novamente. Nao abra varias copias na mesma porta.
+Se aparecer erro, fotografe a mensagem, sem mostrar senha. Nao limpe dados do navegador com alteracoes pendentes.
+Para encerrar: Ctrl+C na janela do sistema.
+
+VERIFICACAO: nove testes de dominio e tres testes HTTP do cadastro/login passaram. Sintaxe JavaScript conferida.
+Testado: primeiro cadastro com/sem exemplos, login, bloqueio de repeticao do cadastro inicial, senha curta e origem invalida.
+Nao houve teste visual nesta entrega: a ferramenta do navegador falhou ao iniciar. Nao testado em outro PC ou celular fisico.
+
+LIMITES: versao para avaliacao com dados ficticios. Ainda nao liberada para pacientes reais ou acesso publico.
+Recuperacao/troca de senha, hospedagem/acesso remoto seguro, backup externo e homologacao em aparelhos reais continuam pendentes.
+Offline exige primeiro login online e tem limite atual de oito horas. Sincronize antes de considerar alteracoes confirmadas.
+
+CORRECAO DE ABERTURA: porta escolhida pelo Windows na primeira abertura e guardada em dados/porta-local.txt. Aguarde TESTE LOCAL OK. Nao use o endereco antigo 19029. Teste de resposta da pagina e cadastro passou em 10/11/2026; abertura visual no seu navegador ainda requer confirmacao.

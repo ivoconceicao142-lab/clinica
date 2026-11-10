@@ -3,8 +3,8 @@ import uuid
 from datetime import date,timedelta
 from core import QUESTIONS
 
-def seed(store):
- u=store.login('teste','SomenteTeste123!')
+def seed(store, user=None):
+ u=user or store.login('teste','SomenteTeste123!')
  if not u or store.snapshot(u)['pacientes']:return
  def add(k,d):
   rid=str(uuid.uuid4());store.apply(u,dict(id=str(uuid.uuid4()),record=rid,kind=k,data=d,base=0));return rid
