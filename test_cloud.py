@@ -19,6 +19,20 @@ for message,expected in cases:
  assert json.loads(result)['category']==expected
 """
   subprocess.run([sys.executable,'-c',code],check=True)
+ def test_pooled_connection_limits_and_cleanup(self):
+  import types
+  from unittest.mock import patch,call
+  db=__import__('unittest.mock',fromlist=['MagicMock']).MagicMock();driver=types.SimpleNamespace(connect=Mock(return_value=db))
+  with patch.dict(sys.modules,{'psycopg':driver}):
+   conn=PGConnection('postgresql://example')
+   self.assertNotIn('options',driver.connect.call_args.kwargs)
+   self.assertEqual(driver.connect.call_args.kwargs['connect_timeout'],8)
+   self.assertIs(conn.__enter__(),conn)
+   self.assertEqual(db.execute.call_args_list,[call("SET LOCAL statement_timeout = '15s'"),call("SET LOCAL lock_timeout = '10s'"),call('SELECT pg_advisory_xact_lock(714231906)')])
+   conn.__exit__(None,None,None);db.__exit__.assert_called_once_with(None,None,None)
+   db.execute.side_effect=RuntimeError('failure')
+   with self.assertRaises(RuntimeError):conn.__enter__()
+   db.close.assert_called_once()
  def test_rows_support_existing_access(self):
   r=Row([('name','ana'),('active',1)]);self.assertEqual(r[0],'ana');self.assertEqual(r['active'],1)
   self.assertEqual(row_factory(Mock(description=None))([]),{})

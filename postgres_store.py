@@ -13,9 +13,12 @@ def row_factory(cursor):
 class PGConnection:
  def __init__(self,dsn):
   import psycopg
-  self.db=psycopg.connect(dsn,row_factory=row_factory,connect_timeout=8,options='-c statement_timeout=15000 -c lock_timeout=10000')
+  self.db=psycopg.connect(dsn,row_factory=row_factory,connect_timeout=8)
  def __enter__(self):
   try:
+   # Limites locais à transação: compatíveis com o pool, sem opções no handshake.
+   self.db.execute("SET LOCAL statement_timeout = '15s'")
+   self.db.execute("SET LOCAL lock_timeout = '10s'")
    # Trava transacional compartilhada por instâncias: preserva validações
    # de saldo, agenda, matrícula e idempotência (duas pessoas por clínica).
    self.db.execute('SELECT pg_advisory_xact_lock(714231906)')
