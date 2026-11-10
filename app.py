@@ -17,13 +17,32 @@ if not CLOUD:
  if not identity.exists():identity.write_text(secrets.token_hex(16),encoding='ascii')
  INSTALLATION=identity.read_text(encoding='ascii').strip()
 
+def failure_category(exc):
+ # A mensagem original é inspecionada em memória; somente categorias fixas saem.
+ message=str(exc).lower()
+ rules=[
+  ('authentication_failed',('password authentication failed','authentication failed')),
+  ('connection_timeout',('timeout expired','connection timeout','timed out')),
+  ('dns_failure',('could not translate host name','name or service not known','getaddrinfo')),
+  ('startup_parameter_unsupported',('unsupported startup parameter','unsupported startup option','unrecognized configuration parameter','invalid connection option')),
+  ('database_unavailable',('database is not available','endpoint is disabled','endpoint is not active','quota exceeded')),
+  ('database_not_found',('database',)),
+  ('connection_refused',('connection refused',)),
+  ('tls_failure',('certificate verify failed','ssl error','tls error')),
+ ]
+ for category,patterns in rules:
+  if category=='database_not_found':
+   if 'database' in message and 'does not exist' in message:return category
+  elif any(pattern in message for pattern in patterns):return category
+ return 'unclassified'
+
 def log_failure(exc):
  # Somente tipo, código SQL e localização: nunca mensagem, SQL ou credenciais.
  import traceback,sys
  frames=[f'{Path(f.filename).name}:{f.lineno}:{f.name}' for f in traceback.extract_tb(exc.__traceback__)]
  state=getattr(exc,'sqlstate',None)
  if not isinstance(state,str) or len(state)!=5 or not state.isalnum():state=None
- print(json.dumps({'event':'clinica_server_error','type':type(exc).__name__,'sqlstate':state,'frames':frames}),file=sys.stderr,flush=True)
+ print(json.dumps({'event':'clinica_server_error','type':type(exc).__name__,'category':failure_category(exc),'sqlstate':state,'frames':frames}),file=sys.stderr,flush=True)
 
 def ensure_store():
  global store,INSTALLATION
