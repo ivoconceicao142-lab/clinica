@@ -97,7 +97,7 @@ function lockScreen(){if(busy)return;$('editor').close();vault=null;key=null;sal
 $('lock').onclick=lockScreen;
 $('erase').onclick=async()=>{if(busy)return;if(!confirm(vault.queue.length?'Existem pendências. Apagar o cofre perderá essas alterações. Confirma?':'Apagar a cópia local e sair?'))return;try{await api('logout',{});}catch{}await setVault(vault.user.name,null);lockScreen();message('Cofre local apagado.');};
 for(const ev of ['pointerdown','keydown'])document.addEventListener(ev,()=>lastActivity=Date.now());setInterval(()=>{if(vault&&Date.now()-lastActivity>300000)lockScreen();},10000);
-window.addEventListener('online',()=>{render();if(vault)message('Conexão detectada. Clique em Sincronizar.');});window.addEventListener('offline',render);
+window.addEventListener('online',()=>{render();if(vault)message('Conexão detectada. Clique em Sincronizar.');});window.addEventListener('offline',()=>render());
 $('backup').onclick=async()=>{try{const r=await api('backup',{});message(r.message+' Arquivo: '+r.file);}catch(e){message(e.message);}};
 $('audit').onclick=async()=>{try{$('adminResult').textContent=JSON.stringify((await api('audit')).audit,null,2);}catch(e){message(e.message);}};
 $('users').onclick=()=>{
