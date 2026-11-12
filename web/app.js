@@ -45,7 +45,7 @@ async function login(offline){
 }
 $('loginForm').onsubmit=e=>{e.preventDefault();login(false);};$('offline').onclick=()=>login(true);
 function guard(){if(!vault)throw Error('Entre no sistema.');if(Date.now()-vault.verified>8*3600000||Date.now()<vault.verified)throw Error('Prazo offline encerrado. Entre online novamente.');}
-function projected(){const data=structuredClone(vault.records);for(const op of vault.queue){if(!data[op.kind])continue;const list=data[op.kind],i=list.findIndex(x=>x.id===op.record);const item={id:op.record,data:op.data,version:op.base+1,updated:'Pendente',author:vault.user.id};if(i<0)list.unshift(item);else list[i]=item;}return data;}
+function projected(){const data=structuredClone(vault.records);for(const op of vault.queue){if(!data[op.kind])continue;const list=data[op.kind],i=list.findIndex(x=>x.id===op.record);const item={id:op.record,data:op.data,version:op.base+1,updated:'Pendente',author:vault.user.id,author_name:vault.user.name};if(i<0)list.unshift(item);else list[i]=item;}return data;}
 function displayRef(id,data){for(const rows of Object.values(data)){const r=rows.find(x=>x.id===id);if(r)return r.data.nome||r.data.descricao||(r.data.tipo+' · '+r.updated);}return id||'';}
 const money=n=>(n/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 function render(){

@@ -65,7 +65,7 @@ class Store:
   with self.connect() as c:r=c.execute('SELECT * FROM users WHERE name=? AND active=1',(name.lower().strip(),)).fetchone()
   if not r or not secrets.compare_digest(r['hash'],digest(password,r['salt'])):return None
   return {'id':r['id'],'name':r['name'],'role':r['role']}
- def records(self,c,kind):return [dict(id=r['id'],version=r['version'],data=json.loads(r['data']),author=r['author'],updated=r['updated']) for r in c.execute('SELECT * FROM records WHERE kind=? ORDER BY updated DESC',(kind,))]
+ def records(self,c,kind):return [dict(id=r['id'],version=r['version'],data=json.loads(r['data']),author=r['author'],author_name=r['author_name'],updated=r['updated']) for r in c.execute('SELECT r.*, u.name AS author_name FROM records r LEFT JOIN users u ON u.id=r.author WHERE r.kind=? ORDER BY r.updated DESC',(kind,))]
  def snapshot(self,user):
   with self.connect() as c:return {k:self.records(c,k) for k,roles in ACCESS.items() if user['role'] in roles}
  def apply(self,user,op):
