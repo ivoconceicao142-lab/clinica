@@ -111,12 +111,19 @@ def upload(token, parent, blob):
 def main():
     stage = 'configuracao'
     try:
+        stage = 'BACKUP_PASSWORD: ausente ou menor que 16 caracteres'
         password = os.environ.pop('BACKUP_PASSWORD')
         if len(password) < 16:
             raise ValueError('password length')
-        env = database_env(os.environ.pop('BACKUP_DATABASE_URL'))
-        auth = json.loads(decrypt(base64.b64decode(os.environ.pop('DRIVE_AUTH_ENCRYPTED'), validate=True),
-                                  os.environ.pop('DRIVE_AUTH_PASSWORD')))
+        stage = 'BACKUP_DATABASE_URL: ausente ou conexao direta invalida'
+        env = database_env(os.environ.pop('BACKUP_DATABASE_URL').strip())
+        stage = 'DRIVE_AUTH_ENCRYPTED: ausente ou formato invalido'
+        encoded = ''.join(os.environ.pop('DRIVE_AUTH_ENCRYPTED').split())
+        encrypted_auth = base64.b64decode(encoded, validate=True)
+        if not encrypted_auth.startswith(MAGIC):
+            raise ValueError('authorization format')
+        stage = 'DRIVE_AUTH_PASSWORD: ausente, senha incorreta ou autorizacao danificada'
+        auth = json.loads(decrypt(encrypted_auth, os.environ.pop('DRIVE_AUTH_PASSWORD')))
         stage = 'autorizacao do Drive'
         token = drive_token(auth)
         stage = 'exportacao PostgreSQL'
