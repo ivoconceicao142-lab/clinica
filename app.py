@@ -100,7 +100,7 @@ class Handler(BaseHTTPRequestHandler):
     with store.connect() as c:rows=[dict(r) for r in c.execute('SELECT id,name,role,active FROM users')]
     return self.send({'users':rows})
    return self.send({'error':'Não encontrado.'},404)
-  files={'/':'index.html','/app.js':'app.js','/v2.js':'v2.js','/modules.js':'modules.js','/style.css':'style.css','/sw.js':'sw.js','/manifest.json':'manifest.json'}
+  files={'/backup.html':'backup.html','/backup-privacidade.html':'backup-privacidade.html','/':'index.html','/app.js':'app.js','/v2.js':'v2.js','/modules.js':'modules.js','/style.css':'style.css','/sw.js':'sw.js','/manifest.json':'manifest.json'}
   if path not in files:return self.send({'error':'Não encontrado.'},404)
   file=ROOT/'web'/files[path];raw=file.read_bytes();self.send_response(200);self.headers_common()
   self.send_header('Content-Type',{'html':'text/html; charset=utf-8','js':'application/javascript','css':'text/css','json':'application/json'}[file.suffix[1:]])
