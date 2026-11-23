@@ -99,7 +99,40 @@ $('erase').onclick=async()=>{if(busy)return;if(!confirm(vault.queue.length?'Exis
 for(const ev of ['pointerdown','keydown'])document.addEventListener(ev,()=>lastActivity=Date.now());setInterval(()=>{if(vault&&Date.now()-lastActivity>300000)lockScreen();},10000);
 window.addEventListener('online',()=>{render();if(vault)message('Conexão detectada. Clique em Sincronizar.');});window.addEventListener('offline',()=>render());
 $('backup').onclick=async()=>{try{const r=await api('backup',{});message(r.message+' Arquivo: '+r.file);}catch(e){message(e.message);}};
-$('audit').onclick=async()=>{try{$('adminResult').textContent=JSON.stringify((await api('audit')).audit,null,2);}catch(e){message(e.message);}};
+function renderAudit(rows,users,records){
+ const names=new Map(users.map(u=>[u.id,u.name]));
+ const refs=new Map(Object.values(records||{}).flat().map(r=>[r.id,r.data.nome||r.data.descricao||'Registro relacionado']));
+ const fieldNames={nome:'Nome',matricula:'Matrícula',telefone:'Telefone',responsavel:'Responsável',ativo:'Ativo',paciente:'Paciente',profissional:'Profissional',inicio:'Início',fim:'Fim',status:'Situação',estado:'Estado',tipo:'Tipo',conteudo:'Conteúdo',referencia:'Referência',respostas:'Respostas',valor:'Valor',desconto:'Desconto',acrescimo:'Acréscimo',perfil:'Perfil',quantidade:'Quantidade',motivo:'Motivo',data:'Data',sala:'Sala',material:'Material',titulo:'Conta',vinculo:'Vínculo',queixa:'Queixa',historia:'História',odontologico:'Histórico odontológico',familiar:'Histórico familiar',registro:'Registro',cargo:'Cargo',codigo:'Código',unidade:'Unidade',minimo:'Estoque mínimo',lote:'Lote',validade:'Validade',vencimento:'Vencimento',confirmado:'Confirmado',forma:'Forma',servico:'Serviço',cancelado:'Cancelado',motivo_cancelamento:'Motivo do cancelamento',detalhe:'Detalhe'};
+ const label=k=>fieldNames[k]||k.replaceAll('_',' ');
+ function parse(v){if(v==null)return {};try{const d=typeof v==='string'?JSON.parse(v):v;return d&&typeof d==='object'&&!Array.isArray(d)?d:null;}catch{return null;}}
+ function format(v,k){
+  if(v===undefined||v===null||v==='')return 'Não informado';
+  if(typeof v==='boolean')return v?'Sim':'Não';
+  if(['valor','desconto','acrescimo'].includes(k)&&typeof v==='number')return (v/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+  if(typeof v==='object')return Object.entries(v).map(([key,value])=>label(key)+': '+format(value,key)).join('; ');
+  if(refs.has(v))return refs.get(v);
+  return String(v);
+ }
+ if(!rows.length)return '<p>Nenhuma alteração registrada.</p>';
+ return '<p>Até 500 alterações mais recentes. Horários de Brasília.</p>'+rows.map(row=>{
+  const before=parse(row.before),after=parse(row.after),date=new Date(row.at);
+  const when=Number.isNaN(date.getTime())?'Data não disponível':date.toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'});
+  const kind=String(row.action||'').replace(/^salvar_/,'');
+  const action=row.action==='criar_usuario'?'Usuário criado':(row.before==null?'Cadastro criado':'Registro alterado')+' · '+(labels[kind]||({funcionarios:'Funcionários'})[kind]||kind);
+  const actor=names.get(row.actor)||(row.actor==='configuracao'?'Configuração inicial':'Usuário não identificado');
+  let detail='<p>Detalhes indisponíveis para este registro. O histórico original foi preservado.</p>';
+  if(before&&after){const keys=[...new Set([...Object.keys(before),...Object.keys(after)])].filter(k=>JSON.stringify(before[k])!==JSON.stringify(after[k]));
+   detail=keys.length?'<div style="overflow-x:auto"><table><thead><tr><th>Campo</th><th>Antes</th><th>Depois</th></tr></thead><tbody>'+keys.map(k=>'<tr><td>'+esc(label(k))+'</td><td>'+esc(format(before[k],k))+'</td><td>'+esc(format(after[k],k))+'</td></tr>').join('')+'</tbody></table></div>':'<p>Nenhuma diferença de conteúdo registrada.</p>';
+  }
+  return '<article><h3>'+esc(action)+'</h3><p>'+esc(when)+' · '+esc(actor)+' · Alteração nº '+esc(row.seq)+'</p><details><summary>Ver alterações</summary>'+detail+'</details></article>';
+ }).join('');
+}
+$('audit').onclick=async()=>{
+ const userId=vault?.user.id;const button=$('audit');button.disabled=true;$('adminResult').textContent='Carregando histórico…';
+ try{const [history,users]=await Promise.all([api('audit'),api('users')]);if(!vault||vault.user.id!==userId||vault.user.role!=='administrador')return;$('adminResult').innerHTML=renderAudit(history.audit,users.users,vault.records);}
+ catch(e){$('adminResult').textContent='Não foi possível carregar o histórico.';message(e.message);}finally{button.disabled=false;}
+};
+
 $('users').onclick=()=>{
  const dialog=document.createElement('dialog');const form=document.createElement('form');
  form.innerHTML='<h2>Cadastrar usuário de acesso</h2><p>Cadastrar funcionário não cria acesso automaticamente. Escolha o perfil conforme a função.</p><label>Usuário<input name="name" required pattern="[a-z0-9._-]{3,40}" minlength="3" maxlength="40" autocomplete="off"></label><label>Perfil<select name="role"><option value="recepcao">Recepção</option><option value="dentista">Dentista</option><option value="financeiro">Financeiro</option><option value="estoque">Estoque</option><option value="administrador">Administrador</option></select></label><label>Senha (mínimo 12 caracteres)<input name="password" type="password" minlength="12" maxlength="200" required autocomplete="new-password"></label><label>Repita a senha<input name="confirm" type="password" minlength="12" required autocomplete="new-password"></label><p class="error" role="alert"></p><button type="submit">Confirmar cadastro</button> <button type="button">Cancelar</button>';
