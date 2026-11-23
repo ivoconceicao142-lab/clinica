@@ -61,6 +61,33 @@ class Store:
    c.execute('INSERT INTO users VALUES(?,?,?,?,?,1)',(uid,name,role,salt,digest(password,salt)))
    c.execute('INSERT INTO audit(at,actor,action,record_id,after) VALUES(?,?,?,?,?)',(now(),actor,'criar_usuario',uid,json.dumps({'nome':name,'perfil':role})))
   return uid
+ def manage_user(self,actor,target,action,password=None):
+  if action not in {'activate','deactivate','password'}:raise ValueError('Ação inválida.')
+  if action=='password' and not password_ok(password):raise ValueError('A senha deve ter entre 12 e 200 caracteres.')
+  with self.connect() as c:
+   c.execute('BEGIN IMMEDIATE')
+   admin=c.execute('SELECT role,active FROM users WHERE id=?',(actor['id'],)).fetchone()
+   if not admin or not admin['active'] or admin['role']!='administrador':raise ValueError('Somente administrador ativo.')
+   user=c.execute('SELECT id,name,role,active FROM users WHERE id=?',(target,)).fetchone()
+   if not user:raise ValueError('Usuário não encontrado.')
+   before={'nome':user['name'],'perfil':user['role'],'ativo':bool(user['active'])}
+   after=dict(before)
+   if action=='deactivate':
+    if target==actor['id']:raise ValueError('Não é permitido desativar seu próprio acesso.')
+    if user['role']=='administrador' and user['active'] and c.execute("SELECT COUNT(*) FROM users WHERE role='administrador' AND active=1").fetchone()[0]<=1:raise ValueError('Mantenha pelo menos um administrador ativo.')
+   if action=='password':
+    salt=secrets.token_hex(16)
+    c.execute('UPDATE users SET salt=?,hash=? WHERE id=?',(salt,digest(password,salt),target))
+    event='trocar_senha_usuario'
+   else:
+    after['ativo']=action=='activate'
+    if before['ativo']==after['ativo']:return {'ok':True,'changed':False}
+    c.execute('UPDATE users SET active=? WHERE id=?',(int(after['ativo']),target))
+    event='ativar_usuario' if after['ativo'] else 'desativar_usuario'
+   c.execute('DELETE FROM sessions WHERE "user"=?',(target,))
+   c.execute('INSERT INTO audit(at,actor,action,record_id,before,after) VALUES(?,?,?,?,?,?)',(now(),actor['id'],event,target,json.dumps(before),json.dumps(after)))
+   return {'ok':True,'changed':True}
+
  def login(self,name,password):
   with self.connect() as c:r=c.execute('SELECT * FROM users WHERE name=? AND active=1',(name.lower().strip(),)).fetchone()
   if not r or not secrets.compare_digest(r['hash'],digest(password,r['salt'])):return None

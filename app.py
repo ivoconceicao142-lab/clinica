@@ -153,6 +153,9 @@ class Handler(BaseHTTPRequestHandler):
    if path=='/api/users':
     if u['role']!='administrador':return self.send({'error':'Somente administrador.'},403)
     uid=store.create_user(body.get('name',''),body.get('password',''),body.get('role',''),u['id']);return self.send({'id':uid})
+   if path=='/api/users/manage':
+    if u['role']!='administrador':return self.send({'error':'Somente administrador.'},403)
+    return self.send(store.manage_user(u,body.get('id'),body.get('action'),body.get('password')))
    if path=='/api/backup':
     if u['role']!='administrador':return self.send({'error':'Somente administrador.'},403)
     if CLOUD:return self.send({'error':'Backup online deve ser executado pelo provedor PostgreSQL. Nenhum arquivo de backup foi criado.'},409)

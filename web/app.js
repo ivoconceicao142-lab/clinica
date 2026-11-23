@@ -29,7 +29,8 @@ async function login(offline){
  try{
   if(!crypto.subtle)throw Error('Este aparelho precisa de HTTPS para funcionar com proteção offline.');
   if(!offline){const config=await api('setup');vaultNamespace=config.installation;localStorage.setItem('clinica-installation',vaultNamespace);}
-  let cached=await unlock(name,password);
+  let cached=null,unreadable=null;
+  try{cached=await unlock(name,password);}catch(e){if(offline)throw e;unreadable=await getVault(name);}
   if(offline){
    if(!cached)throw Error('Primeiro entre online e sincronize neste aparelho.');
    if(Date.now()-cached.verified>8*3600000||Date.now()<cached.verified)throw Error('Prazo offline encerrado. Faça login online novamente.');
@@ -37,10 +38,11 @@ async function login(offline){
   }else{
    await api('login',{name,password});const state=await api('state');
    if(cached&&cached.user.id!==state.user.id)throw Error('Conta diferente da cópia local. Confira antes de continuar.');
+   if(unreadable){await setVault(name+':recuperacao:'+Date.now()+':'+crypto.randomUUID(),unreadable);}
    if(!cached){salt=crypto.getRandomValues(new Uint8Array(16));key=await derive(password,salt);}
    vault={user:state.user,records:state.records,queue:cached?.queue||[],verified:Date.now()};await save();
   }
-  $('password').value='';$('login').hidden=true;$('workspace').hidden=false;current=Object.keys(vault.records)[0];lastActivity=Date.now();render();message(offline?'Cofre offline aberto. Alterações ainda precisam de validação online.':'Entrada realizada. Sincronize a fila pendente quando necessário.');
+  $('password').value='';$('login').hidden=true;$('workspace').hidden=false;current=Object.keys(vault.records)[0];lastActivity=Date.now();render();message(offline?'Cofre offline aberto. Alterações ainda precisam de validação online.':unreadable?'Entrada realizada. A cópia local anterior foi preservada para recuperação. Pendências dessa cópia não foram enviadas; solicite ajuda antes de refazer alterações.':'Entrada realizada. Sincronize a fila pendente quando necessário.');
  }catch(e){message(e.message);}
 }
 $('loginForm').onsubmit=e=>{e.preventDefault();login(false);};$('offline').onclick=()=>login(true);
@@ -93,7 +95,7 @@ async function sync(){
 }
 $('sync').onclick=sync;
 $('queue').onclick=async e=>{if(e.target.dataset.discard===undefined||busy)return;const i=Number(e.target.dataset.discard);if(!confirm('Descartar esta alteração e todas as posteriores deste aparelho? Os registros já confirmados no servidor serão preservados.'))return;const previous=vault.queue;vault.queue=previous.slice(0,i);try{await save();render();}catch{vault.queue=previous;message('Não foi possível gravar. Fila preservada.');}};
-function lockScreen(){if(busy)return;$('editor').close();vault=null;key=null;salt=null;$('fields').innerHTML='';$('list').innerHTML='';$('queue').innerHTML='';$('dashboard').innerHTML='';$('adminResult').textContent='';$('workspace').hidden=true;$('login').hidden=false;$('identity').textContent='Bloqueado';message('Tela bloqueada. Alterações salvas permanecem criptografadas neste aparelho.');}
+function lockScreen(){if(busy)return;$('editor').close();document.querySelectorAll('[data-access-dialog]').forEach(d=>d.remove());vault=null;key=null;salt=null;$('fields').innerHTML='';$('list').innerHTML='';$('queue').innerHTML='';$('dashboard').innerHTML='';$('adminResult').textContent='';$('workspace').hidden=true;$('login').hidden=false;$('identity').textContent='Bloqueado';message('Tela bloqueada. Alterações salvas permanecem criptografadas neste aparelho.');}
 $('lock').onclick=lockScreen;
 $('erase').onclick=async()=>{if(busy)return;if(!confirm(vault.queue.length?'Existem pendências. Apagar o cofre perderá essas alterações. Confirma?':'Apagar a cópia local e sair?'))return;try{await api('logout',{});}catch{}await setVault(vault.user.name,null);lockScreen();message('Cofre local apagado.');};
 for(const ev of ['pointerdown','keydown'])document.addEventListener(ev,()=>lastActivity=Date.now());setInterval(()=>{if(vault&&Date.now()-lastActivity>300000)lockScreen();},10000);
@@ -118,11 +120,11 @@ function renderAudit(rows,users,records){
   const before=parse(row.before),after=parse(row.after),date=new Date(row.at);
   const when=Number.isNaN(date.getTime())?'Data não disponível':date.toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'});
   const kind=String(row.action||'').replace(/^salvar_/,'');
-  const action=row.action==='criar_usuario'?'Usuário criado':(row.before==null?'Cadastro criado':'Registro alterado')+' · '+(labels[kind]||({funcionarios:'Funcionários'})[kind]||kind);
+  const action=({criar_usuario:'Usuário criado',trocar_senha_usuario:'Senha alterada',ativar_usuario:'Acesso reativado',desativar_usuario:'Acesso desativado'})[row.action]||(row.before==null?'Cadastro criado':'Registro alterado')+' · '+(labels[kind]||({funcionarios:'Funcionários'})[kind]||kind);
   const actor=names.get(row.actor)||(row.actor==='configuracao'?'Configuração inicial':'Usuário não identificado');
   let detail='<p>Detalhes indisponíveis para este registro. O histórico original foi preservado.</p>';
   if(before&&after){const keys=[...new Set([...Object.keys(before),...Object.keys(after)])].filter(k=>JSON.stringify(before[k])!==JSON.stringify(after[k]));
-   detail=keys.length?'<div style="overflow-x:auto"><table><thead><tr><th>Campo</th><th>Antes</th><th>Depois</th></tr></thead><tbody>'+keys.map(k=>'<tr><td>'+esc(label(k))+'</td><td>'+esc(format(before[k],k))+'</td><td>'+esc(format(after[k],k))+'</td></tr>').join('')+'</tbody></table></div>':'<p>Nenhuma diferença de conteúdo registrada.</p>';
+   detail=keys.length?'<div style="overflow-x:auto"><table><thead><tr><th>Campo</th><th>Antes</th><th>Depois</th></tr></thead><tbody>'+keys.map(k=>'<tr><td>'+esc(label(k))+'</td><td>'+esc(format(before[k],k))+'</td><td>'+esc(format(after[k],k))+'</td></tr>').join('')+'</tbody></table></div>':row.action==='trocar_senha_usuario'?'<p>Senha substituída e sessões online encerradas. A senha não é registrada no histórico.</p>':'<p>Nenhuma diferença de conteúdo registrada.</p>';
   }
   return '<article><h3>'+esc(action)+'</h3><p>'+esc(when)+' · '+esc(actor)+' · Alteração nº '+esc(row.seq)+'</p><details><summary>Ver alterações</summary>'+detail+'</details></article>';
  }).join('');
