@@ -28,6 +28,7 @@ jobs:
           python3 -m venv /tmp/backup-env
           /tmp/backup-env/bin/pip install cryptography==50.0.2
       - name: Exportar, criptografar e conferir no Drive
+        id: backup_verified
         env:
           BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
           BACKUP_PASSWORD: ${{ secrets.BACKUP_PASSWORD }}
@@ -36,3 +37,9 @@ jobs:
         run: |
           export PATH="/usr/lib/postgresql/18/bin:$PATH"
           /tmp/backup-env/bin/python scripts/backup_nuvem.py
+      - name: Confirmar backup no monitor externo
+        if: ${{ success() && steps.backup_verified.outcome == 'success' }}
+        timeout-minutes: 2
+        env:
+          BACKUP_HEALTHCHECK_URL: ${{ secrets.BACKUP_HEALTHCHECK_URL }}
+        run: python3 scripts/notificar_backup.py
