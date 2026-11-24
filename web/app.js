@@ -33,7 +33,7 @@ async function login(offline){
   try{cached=await unlock(name,password);}catch(e){if(offline)throw e;unreadable=await getVault(name);}
   if(offline){
    if(!cached)throw Error('Primeiro entre online e sincronize neste aparelho.');
-   if(Date.now()-cached.verified>8*3600000||Date.now()<cached.verified)throw Error('Prazo offline encerrado. Faça login online novamente.');
+   if(accessExpired(cached))throw Error('Prazo offline encerrado. Faça login online novamente.');
    vault=cached;
   }else{
    await api('login',{name,password});const state=await api('state');
@@ -46,7 +46,8 @@ async function login(offline){
  }catch(e){message(e.message);}
 }
 $('loginForm').onsubmit=e=>{e.preventDefault();login(false);};$('offline').onclick=()=>login(true);
-function guard(){if(!vault)throw Error('Entre no sistema.');if(Date.now()-vault.verified>8*3600000||Date.now()<vault.verified)throw Error('Prazo offline encerrado. Entre online novamente.');}
+function accessExpired(value){const verified=value?.verified,now=Date.now();return !Number.isFinite(verified)||now<verified||now-verified>=8*3600000;}
+function guard(){if(!vault)throw Error('Entre no sistema.');if(accessExpired(vault))throw Error('Prazo offline encerrado. Entre online novamente.');}
 function projected(){const data=structuredClone(vault.records);for(const op of vault.queue){if(!data[op.kind])continue;const list=data[op.kind],i=list.findIndex(x=>x.id===op.record);const item={id:op.record,data:op.data,version:op.base+1,updated:'Pendente',author:vault.user.id,author_name:vault.user.name};if(i<0)list.unshift(item);else list[i]=item;}return data;}
 function displayRef(id,data){for(const rows of Object.values(data)){const r=rows.find(x=>x.id===id);if(r)return r.data.nome||r.data.descricao||(r.data.tipo+' · '+r.updated);}return id||'';}
 const money=n=>(n/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
@@ -98,7 +99,15 @@ $('queue').onclick=async e=>{if(e.target.dataset.discard===undefined||busy)retur
 function lockScreen(){if(busy)return;$('editor').close();document.querySelectorAll('[data-access-dialog]').forEach(d=>d.remove());vault=null;key=null;salt=null;$('fields').innerHTML='';$('list').innerHTML='';$('queue').innerHTML='';$('dashboard').innerHTML='';$('adminResult').textContent='';$('workspace').hidden=true;$('login').hidden=false;$('identity').textContent='Bloqueado';message('Tela bloqueada. Alterações salvas permanecem criptografadas neste aparelho.');}
 $('lock').onclick=lockScreen;
 $('erase').onclick=async()=>{if(busy)return;if(!confirm(vault.queue.length?'Existem pendências. Apagar o cofre perderá essas alterações. Confirma?':'Apagar a cópia local e sair?'))return;try{await api('logout',{});}catch{}await setVault(vault.user.name,null);lockScreen();message('Cofre local apagado.');};
-for(const ev of ['pointerdown','keydown'])document.addEventListener(ev,()=>lastActivity=Date.now());setInterval(()=>{if(vault&&Date.now()-lastActivity>300000)lockScreen();},10000);
+function checkAccessDeadline(){
+ if(!vault)return;
+ if(accessExpired(vault)){lockScreen();message('Prazo de acesso encerrado. Entre online novamente. Pendências salvas permanecem no aparelho.');}
+ else if(Date.now()-lastActivity>=300000)lockScreen();
+}
+for(const ev of ['pointerdown','keydown'])document.addEventListener(ev,()=>{checkAccessDeadline();lastActivity=Date.now();},true);
+setInterval(checkAccessDeadline,10000);
+window.addEventListener('focus',checkAccessDeadline);
+document.addEventListener('visibilitychange',checkAccessDeadline);
 window.addEventListener('online',()=>{render();if(vault)message('Conexão detectada. Clique em Sincronizar.');});window.addEventListener('offline',()=>render());
 $('backup').onclick=async()=>{try{const r=await api('backup',{});message(r.message+' Arquivo: '+r.file);}catch(e){message(e.message);}};
 function renderAudit(rows,users,records){
