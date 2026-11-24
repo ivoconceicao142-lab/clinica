@@ -40,7 +40,7 @@ async function login(offline){
    if(cached&&cached.user.id!==state.user.id)throw Error('Conta diferente da cópia local. Confira antes de continuar.');
    if(unreadable){await setVault(name+':recuperacao:'+Date.now()+':'+crypto.randomUUID(),unreadable);}
    if(!cached){salt=crypto.getRandomValues(new Uint8Array(16));key=await derive(password,salt);}
-   vault={user:state.user,records:state.records,queue:cached?.queue||[],verified:Date.now()};await save();
+   vault={user:state.user,records:state.records,queue:cached?.queue||[],recoveredArchives:cached?.recoveredArchives||[],verified:Date.now()};await save();
   }
   $('password').value='';$('login').hidden=true;$('workspace').hidden=false;current=Object.keys(vault.records)[0];lastActivity=Date.now();render();message(offline?'Cofre offline aberto. Alterações ainda precisam de validação online.':unreadable?'Entrada realizada. A cópia local anterior foi preservada para recuperação. Pendências dessa cópia não foram enviadas; solicite ajuda antes de refazer alterações.':'Entrada realizada. Sincronize a fila pendente quando necessário.');
  }catch(e){message(e.message);}

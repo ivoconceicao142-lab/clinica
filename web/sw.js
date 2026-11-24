@@ -1,6 +1,6 @@
 // Atualize a versão ao alterar o conjunto de arquivos da interface.
-const CACHE='clinica-shell-offline-20261124-prazo';
-const FILES=['/','/app.js','/v2.js','/modules.js','/style.css','/manifest.json'];
+const CACHE='clinica-shell-offline-20261124-recuperacao';
+const FILES=['/','/app.js','/v2.js','/modules.js','/recovery.js','/style.css','/manifest.json'];
 self.addEventListener('install',event=>event.waitUntil((async()=>{
  const cache=await caches.open(CACHE);
  // Só ativa se todos os arquivos necessários estiverem disponíveis.
