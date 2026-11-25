@@ -13,6 +13,8 @@ const specs={
 };
 labels.funcionarios='Funcionários';
 specs.funcionarios=[['nome','Nome completo','text'],['matricula','Matrícula (preserva zeros)','text'],['cargo','Cargo / função','text'],['registro','Registro profissional, se aplicável','text',false],['ativo','Situação',['Ativo','Inativo']]];
+let installationProduction=false;
+function installationStatus(config){installationProduction=config.productionReady===true;document.querySelector('.notice').hidden=installationProduction;}
 let vaultNamespace=localStorage.getItem('clinica-installation')||'legacy';
 let vault=null,key=null,salt=null,current='pacientes',editing=null,busy=false,storage=null,lastActivity=Date.now();
 const enc=new TextEncoder(),dec=new TextDecoder();
@@ -28,7 +30,7 @@ async function login(offline){
  const name=$('username').value.trim().toLowerCase(),password=$('password').value;
  try{
   if(!crypto.subtle)throw Error('Este aparelho precisa de HTTPS para funcionar com proteção offline.');
-  if(!offline){const config=await api('setup');vaultNamespace=config.installation;localStorage.setItem('clinica-installation',vaultNamespace);}
+  if(!offline){const config=await api('setup');installationStatus(config);vaultNamespace=config.installation;localStorage.setItem('clinica-installation',vaultNamespace);}
   let cached=null,unreadable=null;
   try{cached=await unlock(name,password);}catch(e){if(offline)throw e;unreadable=await getVault(name);}
   if(offline){
@@ -56,7 +58,7 @@ function render(){
  $('nav').innerHTML=Object.keys(data).map(k=>'<button data-kind="'+k+'" class="'+(current===k?'active':'')+'">'+labels[k]+'</button>').join('');
  $('title').textContent=labels[current];$('hint').textContent=current==='clinico'?'Registros são imutáveis após salvar. Use Correção e referencie o registro anterior. Anamnese: alergias, medicamentos, condições e demais informações pertinentes.':current==='agenda'?'Remarcação: edite início e fim e informe o motivo. Todos os horários são da clínica, em Brasília.':current==='movimentos'?'Saldo confirmado é calculado no servidor; movimentos offline ficam sujeitos a validação.':'Registros pendentes ainda não foram confirmados pelo servidor.';
  const search=$('search').value.toLocaleLowerCase();const rows=(data[current]||[]).filter(r=>JSON.stringify(r.data).toLocaleLowerCase().includes(search));const fields=specs[current];
- $('list').innerHTML=rows.length?'<table><thead><tr>'+fields.map(f=>'<th>'+esc(f[1])+'</th>').join('')+'<th>Situação / ação</th></tr></thead><tbody>'+rows.map(r=>'<tr>'+fields.map(([k,,type])=>{let v=r.data[k];if(typeof type==='string'&&type.startsWith('@'))v=displayRef(v,data);if(type==='money')v=money(v);if(k==='ativo')v=v?'Ativo':'Inativo';return '<td>'+esc(v)+'</td>';}).join('')+'<td>'+esc(r.updated==='Pendente'?'Pendente':'Confirmado')+(!['clinico','pagamentos','movimentos','titulos'].includes(current)?'<br><button data-edit="'+r.id+'">Editar</button>':'')+'</td></tr>').join('')+'</tbody></table>':'<p>Nenhum registro. Cadastre apenas dados fictícios nesta fase.</p>';
+ $('list').innerHTML=rows.length?'<table><thead><tr>'+fields.map(f=>'<th>'+esc(f[1])+'</th>').join('')+'<th>Situação / ação</th></tr></thead><tbody>'+rows.map(r=>'<tr>'+fields.map(([k,,type])=>{let v=r.data[k];if(typeof type==='string'&&type.startsWith('@'))v=displayRef(v,data);if(type==='money')v=money(v);if(k==='ativo')v=v?'Ativo':'Inativo';return '<td>'+esc(v)+'</td>';}).join('')+'<td>'+esc(r.updated==='Pendente'?'Pendente':'Confirmado')+(!['clinico','pagamentos','movimentos','titulos'].includes(current)?'<br><button data-edit="'+r.id+'">Editar</button>':'')+'</td></tr>').join('')+'</tbody></table>':'<p>Nenhum registro encontrado.</p>';
  $('queue').innerHTML=vault.queue.length?vault.queue.map((op,i)=>'<div class="pending"><b>'+esc(labels[op.kind])+'</b> · '+esc(op.data.nome||op.data.descricao||op.data.tipo||'Registro')+'<p class="error">'+esc(op.error||'Aguardando sincronização')+'</p><button class="secondary" data-discard="'+i+'">Descartar esta e posteriores</button></div>').join(''):'<p>Sem alterações locais pendentes.</p>';
  const cards=[];if(data.pacientes)cards.push([data.pacientes.filter(x=>x.data.ativo).length,'pacientes ativos']);if(data.agenda){const today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo'}).format(new Date());cards.push([data.agenda.filter(x=>x.data.inicio.startsWith(today)&&x.data.status!=='cancelado').length,'consultas hoje']);}
  if(data.titulos){for(const type of ['receber','pagar']){const total=data.titulos.filter(x=>x.data.tipo===type).reduce((s,t)=>s+t.data.valor-(data.pagamentos||[]).filter(p=>p.data.titulo===t.id).reduce((n,p)=>n+(p.data.tipo==='pagamento'?1:-1)*p.data.valor,0),0);cards.push([money(total),type==='receber'?'saldo a receber':'saldo a pagar']);}}
@@ -157,7 +159,7 @@ $('print').onclick=()=>window.print();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>message('Não foi possível preparar a abertura offline. Verifique HTTPS e permissões do navegador.'));
 
 async function setupScreen(){
- try{const config=await api('setup');$('firstSetup').hidden=!config.needed;$('login').hidden=config.needed;if(config.adminPending)message('O administrador online ainda precisa ser configurado pelo responsável pela implantação.');}catch(e){message('Servidor não disponível. Abra INICIAR.cmd; o desbloqueio offline requer um acesso anterior.');}
+ try{const config=await api('setup');installationStatus(config);$('firstSetup').hidden=!config.needed;$('login').hidden=config.needed;if(config.adminPending)message('O administrador online ainda precisa ser configurado pelo responsável pela implantação.');}catch(e){message('Servidor não disponível. Abra INICIAR.cmd; o desbloqueio offline requer um acesso anterior.');}
 }
 $('setupForm').onsubmit=async e=>{
  e.preventDefault();const button=$('setupSubmit');button.disabled=true;

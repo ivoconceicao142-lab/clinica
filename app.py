@@ -86,7 +86,12 @@ class Handler(BaseHTTPRequestHandler):
   if path.startswith('/api/'):ensure_store()
   if path=='/api/setup':
    with store.connect() as c: needed=c.execute('SELECT COUNT(*) FROM users').fetchone()[0]==0
-   return self.send({'needed':needed and not CLOUD,'installation':INSTALLATION,'adminPending':needed and CLOUD})
+   installation=INSTALLATION;production=False
+   if CLOUD:
+    with store.connect() as c:
+     metadata={r['key']:r['value'] for r in c.execute("SELECT key,value FROM clinic_metadata WHERE key IN ('installation','production_ready')")}
+    installation=metadata.get('installation',INSTALLATION);production=metadata.get('production_ready')=='1'
+   return self.send({'needed':needed and not CLOUD,'installation':installation,'adminPending':needed and CLOUD,'productionReady':production,'transitionSupported':True})
   if path.startswith('/api/'):
    u=self.session()
    if not u:return self.send({'error':'Entre novamente para sincronizar.'},401)
