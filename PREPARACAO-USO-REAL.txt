@@ -1,0 +1,33 @@
+SIST CLINICA FC — PREPARACAO PARA USO REAL
+Revisao: 25/11/2026. Ainda nao liberado.
+
+DECISOES DE IVO
+Nome de exibicao: Sist Clinica FC. Nao substitui identificacao juridica ou do profissional nos documentos, ainda a conferir.
+Backups: manter todos por enquanto; sem exclusao automatica. Revisar capacidade do Drive periodicamente. Nenhum arquivo deve ser excluido por esta preparacao.
+Dentista responsavel disponivel hoje para conferir o sistema. Nome e registro profissional ainda nao informados.
+
+EVIDENCIAS CONFIRMADAS NA CONVERSA
+Fluxos ficticios: acessos/perfis e desativacao; conflitos de cadastro e agenda; recebimento parcial e estorno; estoque e bloqueio de saldo insuficiente; nova versao de anamnese, finalizacao e PDF; edicao offline e auditoria.
+Recuperacao apos troca de senha: copia antiga aberta com senha antiga, pendencia recuperada e sincronizada; cadastro restaurado e usuario teste desativado.
+Backup #18: exportacao criptografada, envio e leitura de conferência no Drive, confirmacao recebida pelo Healthchecks. Intervalo 24h + tolerancia 6h. Email de teste recebido. Falta ensaio real de ausencia de sinal; horario exato de 19h nao garantido pelas execucoes observadas.
+Restauracao isolada de copia anterior verificada em novembro; isso nao prova restauracao de todas as copias posteriores.
+Testes locais de seguranca nao equivalem a auditoria completa nem a ensaio concorrente PostgreSQL real.
+
+CONFERENCIA PELO DENTISTA (SOMENTE DADOS FICTICIOS)
+1. Abrir a ficha ficticia e revisar os campos de queixa, historicos, respostas e detalhes. Conferir a diferenca entre Nao informado e Nao.
+2. Conferir profissional responsavel, autor, data do atendimento, estado finalizado e vinculo entre versoes. Datas de exemplos antigos nao devem ser tratadas como atendimento atual.
+3. Conferir PDF, legibilidade e identificacao profissional/institucional necessaria. Finalizacao atual nao constitui assinatura do paciente.
+4. Conferir o fluxo utilizado na pratica: cadastro, agenda, atendimento, registro clinico, complementar/corrigir sem apagar historico e impressao.
+5. Informar lacunas, campos incorretos ou documentos ausentes. Registrar nome do revisor, data e aprovacao ou correcoes solicitadas. Disponibilidade para revisar nao equivale a aprovacao.
+
+ANTES DA LIBERACAO
+- Confirmar contas individuais, perfis e quem sera o dentista no sistema; administrador generico nao substitui conta individual do profissional.
+- Rever privacidade e tratamento dos dados com o responsavel; nao declarar conformidade sem revisao.
+- Identificar quais registros sao ficticios e quais podem conter dados pessoais reais. Nao excluir ou migrar sem inventario e autorizacao concreta.
+- Decidir instalacao definitiva e preservacao/separacao dos exemplos. Registrar backup antes de qualquer limpeza.
+- Documentar procedimento de recuperacao, guarda separada das senhas e responsavel pelos alertas; backups mantidos todos conforme decisao de Ivo.
+- Ensaio final em dois aparelhos com perfis corretos e dados ficticios; confirmar ausencia de pendencias e preservacao dos registros apos reabrir.
+- Revisar bloqueadores tecnicos e registrar aprovacao final do dentista e do responsavel pela operacao antes de retirar aviso de desenvolvimento.
+
+LIMITES DO ACESSO OFFLINE
+Revogacao no servidor nao apaga copia offline ja aberta. Prazo de oito horas depende do aplicativo/relogio do aparelho; nao oferece apagamento remoto. Pendencias e copias de recuperacao exigem cuidado antes de apagar armazenamento do navegador.
